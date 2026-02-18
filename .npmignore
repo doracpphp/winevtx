@@ -1,0 +1,5 @@
+example/
+Security.evtx
+src/cli.ts
+tsconfig.json
+.gitignore

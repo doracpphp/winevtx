@@ -1,5 +1,6 @@
+import type {
+  ParseContext} from "./parse-context.js";
 import {
-  ParseContext,
   TemplateNode,
   debug,
   utf16leToUtf8,

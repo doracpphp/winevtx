@@ -1,3 +1,4 @@
 node_modules/
 dist/
 Security.evtx
+.DS_store

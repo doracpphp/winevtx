@@ -1,6 +1,7 @@
+import type {
+  ChunkRef} from "./parse-context.js";
 import {
   ParseContext,
-  ChunkRef,
   filetimeToUnixtime,
   mapToObject,
 } from "./parse-context.js";

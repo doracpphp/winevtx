@@ -1,6 +1,6 @@
 {
   "name": "winevtx",
-  "version": "0.1.0",
+  "version": "0.1.2",
   "description": "Pure JavaScript Windows EVTX (Event Log) parser for Node.js and browsers",
   "type": "module",
   "exports": {
@@ -17,8 +17,10 @@
   ],
   "scripts": {
     "build": "tsc",
+    "lint": "eslint src",
+    "lint:fix": "eslint src --fix",
     "parse": "tsx src/cli.ts",
-    "prepublishOnly": "npm run build"
+    "prepublishOnly": "npm run build && npm run lint"
   },
   "keywords": [
     "evtx",
@@ -35,7 +37,9 @@
   "license": "MIT",
   "devDependencies": {
     "@types/node": "^22.0.0",
+    "eslint": "^10.0.2",
     "tsx": "^4.0.0",
-    "typescript": "^5.0.0"
+    "typescript": "^5.0.0",
+    "typescript-eslint": "^8.56.1"
   }
 }

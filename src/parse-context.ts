@@ -58,6 +58,7 @@ export class ParseContext {
   attributeMode: boolean;
   chunk: ChunkRef | null;
   knownIDs: Map<number, TemplateNode>;
+  depth: number;
 
   constructor(chunk: ChunkRef | null) {
     this.buff = Buffer.alloc(0);
@@ -68,6 +69,7 @@ export class ParseContext {
     this.attributeMode = false;
     this.chunk = chunk;
     this.knownIDs = new Map();
+    this.depth = 0;
   }
 
   currentKey(): string {
@@ -128,6 +130,7 @@ export class ParseContext {
     result.buff = this.buff;
     result.offset = this.offset;
     result.knownIDs = this.knownIDs;
+    result.depth = this.depth + 1;
     return result;
   }
 
@@ -212,6 +215,9 @@ export class ParseContext {
     const msec = buffer.readUInt16LE(14);
 
     const date = new Date(Date.UTC(year, month - 1, day, hour, min, sec, msec));
+    if (isNaN(date.getTime())) {
+      return "SysTimeParsingError";
+    }
     return date.toISOString();
   }
 

@@ -10,6 +10,8 @@ import {
   readPrefixedUnicodeString,
 } from "./parse-context.js";
 
+const MAX_NESTING_DEPTH = 32;
+
 function parseOpenStartElement(
   ctx: ParseContext,
   hasAttr: boolean,
@@ -113,11 +115,18 @@ function parseTemplateInstance(ctx: ParseContext): boolean {
     const templateBodyLen = ctx.consumeUint32();
 
     const tmpCtx = ctx.copy();
+    tmpCtx.buff = ctx.buff.subarray(0, ctx.getOffset() + templateBodyLen);
     template = tmpCtx.newTemplate(shortId);
     parseBinXML(tmpCtx, true);
 
     ctx.skipBytes(templateBodyLen);
     numArguments = ctx.consumeUint32();
+  }
+
+  // Each argument descriptor is 4 bytes. Without this check a corrupted
+  // count makes us allocate billions of descriptors.
+  if (numArguments * 4 > ctx.buff.length - ctx.getOffset()) {
+    throw new Error(`Invalid template argument count ${numArguments} @ ${ctx.getOffset()}`);
   }
 
   debug(
@@ -136,6 +145,11 @@ function parseTemplateInstance(ctx: ParseContext): boolean {
     const argLen = ctx.consumeUint16();
     const argType = ctx.consumeUint16();
     args.push({ argLen, argType });
+  }
+
+  const totalArgLen = args.reduce((sum, arg) => sum + arg.argLen, 0);
+  if (totalArgLen > ctx.buff.length - ctx.getOffset()) {
+    throw new Error(`Template arguments exceed record data @ ${ctx.getOffset()}`);
   }
 
   const argValues = new Map<number, unknown>();
@@ -249,6 +263,7 @@ function parseTemplateInstance(ctx: ParseContext): boolean {
       case 0x21: {
         // BinXml
         const newCtx = ctx.copy();
+        newCtx.buff = ctx.buff.subarray(0, ctx.getOffset() + arg.argLen);
         parseBinXML(newCtx, false);
         ctx.skipBytes(arg.argLen);
         argValues.set(idx, newCtx.currentTemplate().expand(null));
@@ -335,6 +350,9 @@ export function parseBinXML(
   templateContext: boolean
 ): void {
   debug("ParseBinXML");
+  if (ctx.depth > MAX_NESTING_DEPTH) {
+    throw new Error("BinXML nesting too deep");
+  }
   let keepGoing = true;
 
   while (keepGoing) {

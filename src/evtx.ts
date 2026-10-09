@@ -2,6 +2,7 @@ import type {
   ChunkRef} from "./parse-context.js";
 import {
   ParseContext,
+  debug,
   filetimeToUnixtime,
   mapToObject,
 } from "./parse-context.js";
@@ -198,6 +199,7 @@ function* parseRecordsFromChunkBuf(
 
   for (let i = firstRec; i <= lastRec; i++) {
     const startOfRecord = ctx.getOffset();
+    ctx.buff = chunkBuf;
 
     if (ctx.getOffset() + EVTX_EVENT_RECORD_SIZE > chunkBuf.length) {
       break;
@@ -209,10 +211,26 @@ function* parseRecordsFromChunkBuf(
     if (header.magic !== EVTX_EVENT_RECORD_MAGIC) {
       break;
     }
+    if (
+      header.size < EVTX_EVENT_RECORD_SIZE ||
+      startOfRecord + header.size > chunkBuf.length
+    ) {
+      break;
+    }
 
-    const template = ctx.newTemplate(0);
-    parseBinXML(ctx, false);
-    const event = template.expand(null);
+    // Limit parsing to this record so corrupted data can't run into the rest of the chunk
+    ctx.buff = chunkBuf.subarray(0, startOfRecord + header.size);
+
+    let event: unknown;
+    try {
+      const template = ctx.newTemplate(0);
+      parseBinXML(ctx, false);
+      event = template.expand(null);
+    } catch (err) {
+      debug("Skipping corrupted record %d: %s", Number(header.recordID), String(err));
+      ctx.setOffset(startOfRecord + header.size);
+      continue;
+    }
 
     if (Number(header.recordID) >= startRecordId) {
       yield {
